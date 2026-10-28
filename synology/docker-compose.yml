@@ -1,0 +1,41 @@
+# Proxmox Backup Server auf Synology DS1525+ (amd64), Kunde Lebensquell
+#
+# Zweck: abgeschottete Backup-Kopie. Dieser PBS zieht per Sync-Job (Pull)
+# vom bestehenden PBS "proxbackup"; er selbst wird nicht als Backup-Ziel
+# fuer PVE eingetragen.
+#
+# Image: gebaut aus diesem Repo (Workflow build_ghcr.yaml, Commit 74eddf4),
+# proxmox-backup-server 4.2.8-1, Debian 13.7. Tag + Digest fest.
+#
+# Vorbereitung (einmalig, per SSH als root auf der Synology):
+#   - Shared Folder "pbs" auf dem Btrfs-Volume anlegen (DSM: Papierkorb aus,
+#     Datenpruefsumme an, Dateikomprimierung aus - PBS-Chunks sind schon zstd).
+#   - mkdir -p /volume1/pbs/etc /volume1/pbs/lib /volume1/pbs/log /volume1/pbs/datastore
+#   - chown 34:34 /volume1/pbs/datastore && chmod 750 /volume1/pbs/datastore
+#     (34 = User/Gruppe "backup" im Image; etc/lib/log setzt das Image beim Start selbst)
+#   - Nach dem Start Schreibrecht pruefen (Synology-ACLs koennen chown ueberstimmen):
+#     docker exec pbs su -s /bin/sh backup -c 'touch /datastore/.t && rm /datastore/.t && echo OK'
+#
+# Erststart: https://<synology>:8007, Login admin / pbspbs (Realm pbs) -> Passwort sofort aendern.
+# Datastore im GUI anlegen mit Pfad /datastore.
+
+services:
+  pbs:
+    image: ghcr.io/wiesideluxe/proxmox-backup-server:v4.2.8-1@sha256:cd61345046a21564bd523b415c6d12006cd516ce89fc182ec24b6f3b2c2359b5
+    container_name: pbs
+    hostname: pbs-lebensquell
+    ports:
+      - 8007:8007
+    # Upstream-Vorgabe war 2G; fuer Sync/Verify/GC mehr. An den RAM der Synology anpassen.
+    mem_limit: 4g
+    environment:
+      TZ: Europe/Vienna
+    volumes:
+      - /volume1/pbs/etc:/etc/proxmox-backup
+      - /volume1/pbs/lib:/var/lib/proxmox-backup
+      - /volume1/pbs/log:/var/log/proxmox-backup
+      - /volume1/pbs/datastore:/datastore
+    tmpfs:
+      - /run
+    restart: unless-stopped
+    stop_signal: SIGHUP
