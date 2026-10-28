@@ -12,3 +12,4 @@ proxmox-perl-rs 38ce5a023236f6cfd991af5ba9f3f09a67ba2832 # Thu May 28 15:58:28 2
 perlmod 3a667956097b361a9ef40fa8a2f6c0e26711b025 # Tue Sep 15 17:07:40 2026 +0200
 proxmox-biome 82dcf88a737c72a1d71fd196b6beaddbdd6834f0 # Sun Aug 2 20:53:03 2026 +0200
 proxmox-ve-rs 61125e1fbf8d0f1a6385153bfd6eae36254b9b89 # Thu May 28 16:00:32 2026 +0200
+proxmox-enterprise-support 7fd29dcfaa137b2ab927bacd7c6d2407a3f492aa # Thu Jul 23 23:48:40 2026 +0200
