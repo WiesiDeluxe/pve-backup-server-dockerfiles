@@ -1,0 +1,93 @@
+name: Build image (amd64, ghcr.io)
+
+# Nur manuell starten. Baut ausschliesslich amd64 und pusht genau einen
+# festen Versions-Tag (VERSION-BUILD, z. B. v4.2.8-1) nach ghcr.io.
+# Kein latest, kein Ueberschreiben eines bestehenden Tags.
+
+on:
+  workflow_dispatch:
+    inputs:
+      BUILD:
+        description: 'Build-Nummer (Tag = VERSION-BUILD)'
+        required: true
+        type: number
+        default: 1
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: build-ghcr
+  cancel-in-progress: false
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      ARCH: amd64
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Define image name and tag
+      run: |
+        TAG="$(cat VERSION)-${{ inputs.BUILD }}"
+        IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/proxmox-backup-server"
+        echo "TAG=$TAG" >> "$GITHUB_ENV"
+        echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+        echo "Image: $IMAGE:$TAG"
+
+    - name: Login to ghcr.io
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+    - name: Refuse to overwrite an existing tag
+      run: |
+        if docker manifest inspect "$IMAGE:$TAG" >/dev/null 2>&1; then
+          echo "::error::$IMAGE:$TAG existiert bereits - BUILD-Nummer erhoehen."
+          exit 1
+        fi
+
+    - name: Build image
+      run: ./release.bash "$IMAGE:$TAG" build-image
+
+    - name: Show package versions in image
+      run: |
+        docker run --rm --entrypoint dpkg-query "$IMAGE:$TAG-amd64" \
+          -W -f '${Package} ${Version}\n' \
+          proxmox-backup-server proxmox-backup-client proxmox-widget-toolkit \
+          pbs-i18n libjs-extjs proxmox-termproxy pve-xtermjs proxmox-mini-journalreader \
+          > versions.txt || true
+        cat versions.txt
+        V="$(cat VERSION)"
+        grep -Eq "^proxmox-backup-server ${V#v}-[0-9]+$" versions.txt || \
+          { echo "::error::proxmox-backup-server-Version passt nicht zu VERSION ($V)"; exit 1; }
+
+    - name: Smoke test (GUI on 8007 answers)
+      run: |
+        docker run -d --name pbs-smoke --tmpfs /run -p 8007:8007 "$IMAGE:$TAG-amd64"
+        for i in $(seq 1 45); do
+          code=$(curl -sk -o /dev/null -w '%{http_code}' https://127.0.0.1:8007/ || true)
+          [[ "$code" == "200" ]] && break
+          sleep 2
+        done
+        docker logs pbs-smoke 2>&1 | tail -30
+        docker rm -f pbs-smoke
+        [[ "$code" == "200" ]] || { echo "::error::GUI antwortet nicht (HTTP $code)"; exit 1; }
+
+    - name: Push fixed tag
+      run: |
+        docker tag "$IMAGE:$TAG-amd64" "$IMAGE:$TAG"
+        docker push "$IMAGE:$TAG"
+        DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE:$TAG")
+        echo "Digest: $DIGEST"
+        {
+          echo "### $IMAGE:$TAG"
+          echo
+          echo "Digest: \`$DIGEST\`"
+          echo
+          echo '```'
+          cat versions.txt
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
