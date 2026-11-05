@@ -4,8 +4,8 @@
 # vom bestehenden PBS "proxbackup"; er selbst wird nicht als Backup-Ziel
 # fuer PVE eingetragen.
 #
-# Image: gebaut aus diesem Repo (Workflow build_ghcr.yaml, Commit 74eddf4),
-# proxmox-backup-server 4.2.8-1, Debian 13.7. Tag + Digest fest.
+# Image: gebaut aus diesem Repo (Workflow build_ghcr.yaml, Commit 1814ab4),
+# proxmox-backup-server 4.2.9-1, Debian 13.7. Tag + Digest fest.
 #
 # Vorbereitung (einmalig, per SSH als root auf der Synology):
 #   - Shared Folder "pbs" auf dem Btrfs-Volume anlegen (DSM: Papierkorb aus,
@@ -21,7 +21,7 @@
 
 services:
   pbs:
-    image: ghcr.io/wiesideluxe/proxmox-backup-server:v4.2.8-1@sha256:cd61345046a21564bd523b415c6d12006cd516ce89fc182ec24b6f3b2c2359b5
+    image: ghcr.io/wiesideluxe/proxmox-backup-server:v4.2.9-1@sha256:b3b59a6b4b413bafd65ed783107cf08db0d1b160880c79d05fc2a0d2889a85f6
     container_name: pbs
     hostname: pbs-lebensquell
     ports:
