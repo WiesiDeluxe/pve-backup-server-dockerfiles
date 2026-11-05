@@ -45,7 +45,7 @@ RUN ./scripts/build/make.bash proxmox-biome make_dinstall
 RUN ./scripts/build/make.bash proxmox-widget-toolkit make_dinstall
 RUN ./scripts/build/make.bash perlmod "dpkg_build perlmod-bin" "dpkg_install"
 RUN ./scripts/build/make.bash proxmox-ve-rs "dpkg_build proxmox-frr-templates" "dpkg_install"
-RUN ./scripts/build/make.bash proxmox-perl-rs "make_deb common/pkg" "make_deb pve-rs" dpkg_install
+RUN ./scripts/build/make.bash proxmox-perl-rs --rust 1.94.1 "make_deb common/pkg" "make_deb pve-rs" dpkg_install
 RUN ./scripts/build/make.bash pve-common make_dinstall
 RUN ./scripts/build/make.bash extjs make_deb
 RUN ./scripts/build/make.bash proxmox-i18n make_deb
