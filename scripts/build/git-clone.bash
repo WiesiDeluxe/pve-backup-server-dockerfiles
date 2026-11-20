@@ -8,6 +8,7 @@ if [[ $# -ne 1 ]] && [[ $# -ne 2 ]]; then
 fi
 
 PROXMOX_GIT_URL="${PROXMOX_GIT_URL:-git://git.proxmox.com/git}"
+SUBMODULE_URLS="$(dirname "$1")/submodule-urls"
 
 perform() {
   if [[ ! -d "$1" ]]; then
@@ -17,6 +18,17 @@ perform() {
   fi
   git -C "$1" checkout "$2" -f
   git -C "$1" clean -ffdx
+  # Optional submodule URL overrides (repos/submodule-urls: "<repo> <submodule-name> <url>"),
+  # for submodule commits not yet present in the git.proxmox.com mirror. The commit
+  # itself is still pinned by the parent repository, so only the fetch source changes.
+  if [[ -f "$SUBMODULE_URLS" ]]; then
+    while read -r S_REPO S_NAME S_URL S_REST; do
+      [[ "$S_REPO" == "$1" ]] || continue
+      git -C "$1" submodule init
+      git -C "$1" config "submodule.${S_NAME}.url" "$S_URL"
+      echo "$1: submodule $S_NAME from $S_URL" 1>&2
+    done < <(grep -v '^#' "$SUBMODULE_URLS")
+  fi
   git -C "$1" submodule update --init --recursive
   git -C "$1" submodule foreach git reset --hard
   git -C "$1" submodule foreach git clean -ffdx

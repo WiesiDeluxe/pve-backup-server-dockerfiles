@@ -1,0 +1,4 @@
+# <repo> <submodule-name> <url>
+# proxmox-acme 1.7.3 pins acme.sh 807da649 (= upstream tag 3.1.6), which is not yet
+# in git.proxmox.com/git/mirror_acme.sh (still at 3.1.2 on 2026-11-20).
+proxmox-acme acme.sh https://github.com/acmesh-official/acme.sh.git
