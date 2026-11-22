@@ -75,14 +75,19 @@ RUN /src/scripts/release/bundle-tgz.bash /proxmox-backup-server-${TAG:-$VERSION}
 
 FROM ${IMAGE_PREFIX}debian:trixie AS release_env
 
-# Copy packages
-COPY --from=deb_env /release/ /release/
-
-# Install base packages
-RUN export DEBIAN_FRONTEND=noninteractive && \
+# Install base packages. The .deb files are only bind-mounted from deb_env for
+# this step, so they do not end up as a layer in the image. dist-upgrade brings
+# the Debian packages of the (possibly weeks old) base image up to date. The
+# enterprise repository shipped by proxmox-backup-server is disabled, as apt
+# cannot use it without a subscription (401 Unauthorized).
+RUN --mount=type=bind,from=deb_env,source=/release,target=/release \
+  export DEBIAN_FRONTEND=noninteractive && \
   apt-get -y update && \
+  apt-get -y dist-upgrade && \
   apt install -y runit ssmtp cron && \
-  /release/install
+  /release/install && \
+  test -s /etc/apt/sources.list.d/pbs-enterprise.sources && \
+  echo "Enabled: false" >> /etc/apt/sources.list.d/pbs-enterprise.sources
 
 # Add default configs
 ADD /dockerfiles/pbs/ /etc/proxmox-backup-default/
